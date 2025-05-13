@@ -9,6 +9,7 @@ from telegram.ext import (
     ContextTypes,
 )
 from apscheduler.schedulers.background import BackgroundScheduler
+import asyncio
 
 # ====================== CONFIG ======================
 TOKEN = "8004880517:AAE9CCfc1L-ORWLj7oU6tRYF98CZZIEf6MQ"
@@ -117,15 +118,15 @@ async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = get_all_news()
     await update.message.reply_text(message, parse_mode='HTML')
 
-async def send_daily_news(context: ContextTypes.DEFAULT_TYPE):
+async def send_daily_news(bot):
     message = get_all_news()
     for user_id in subscribed_users:
         try:
-            await context.bot.send_message(chat_id=user_id, text=message, parse_mode='HTML')
+            await bot.send_message(chat_id=user_id, text=message, parse_mode='HTML')
         except Exception as e:
             print(f"Lỗi gửi tin: {e}")
 
-async def check_price_change(context: ContextTypes.DEFAULT_TYPE):
+async def check_price_change(bot):
     global last_prices
     gold = get_gold_price()
     usd = get_usd_price()
@@ -149,19 +150,21 @@ async def check_price_change(context: ContextTypes.DEFAULT_TYPE):
         message = "🔔 <b>Cập nhật giá thay đổi:</b>\n" + "\n".join(changes)
         for user_id in subscribed_users:
             try:
-                await context.bot.send_message(chat_id=user_id, text=message, parse_mode='HTML')
+                await bot.send_message(chat_id=user_id, text=message, parse_mode='HTML')
             except Exception as e:
                 print(f"Lỗi gửi cảnh báo: {e}")
 
 # ====================== LẬP LỊCH ======================
 def schedule_jobs(app):
     scheduler = BackgroundScheduler()
+    loop = asyncio.get_event_loop()
+
     scheduler.add_job(
-        lambda: app.create_task(send_daily_news(app.bot)),
+        lambda: asyncio.run_coroutine_threadsafe(send_daily_news(app.bot), loop),
         trigger='cron', hour=7, minute=0
     )
     scheduler.add_job(
-        lambda: app.create_task(check_price_change(app.bot)),
+        lambda: asyncio.run_coroutine_threadsafe(check_price_change(app.bot), loop),
         trigger='interval', minutes=5
     )
     scheduler.start()
