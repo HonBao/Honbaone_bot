@@ -12,7 +12,7 @@ from telegram.ext import (
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # ====================== CONFIG ======================
-TOKEN = "TOKEN_CUA_BAN"
+TOKEN = "8004880517:AAE9CCfc1L-ORWLj7oU6tRYF98CZZIEf6MQ"
 
 # ====== GIÁ TRỊ LƯU LẠI CHO SO SÁNH GIÁ ======
 last_prices = {
