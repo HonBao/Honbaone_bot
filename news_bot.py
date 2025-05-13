@@ -1,4 +1,5 @@
 import logging
+import asyncio
 import feedparser
 import requests
 from bs4 import BeautifulSoup
@@ -9,10 +10,9 @@ from telegram.ext import (
     ContextTypes,
 )
 from apscheduler.schedulers.background import BackgroundScheduler
-import asyncio
 
 # ====================== CONFIG ======================
-TOKEN = "8004880517:AAE9CCfc1L-ORWLj7oU6tRYF98CZZIEf6MQ"
+TOKEN = "TOKEN_CUA_BAN"
 
 # ====== GIÁ TRỊ LƯU LẠI CHO SO SÁNH GIÁ ======
 last_prices = {
@@ -21,8 +21,8 @@ last_prices = {
     "usd": None
 }
 
-# Danh sách người đã dùng /start
 subscribed_users = set()
+event_loop = asyncio.get_event_loop()
 
 # ====================== LẤY TIN RSS + SCRAPE ======================
 def get_rss_news(url, count=3):
@@ -72,7 +72,7 @@ def get_all_news():
     news += scrape_petrolimex()
     return "\n\n".join(news)
 
-# ====================== LẤY GIÁ RIÊNG ======================
+# ====================== LẤY GIÁ ======================
 def get_gold_price():
     url = "https://www.24h.com.vn/gia-vang-hom-nay-c425.html"
     try:
@@ -107,7 +107,7 @@ def get_gas_price():
     except:
         return None
 
-# ====================== BOT HANDLERS ======================
+# ====================== HANDLERS ======================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_chat.id
     subscribed_users.add(user_id)
@@ -118,15 +118,15 @@ async def news(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = get_all_news()
     await update.message.reply_text(message, parse_mode='HTML')
 
-async def send_daily_news(bot):
+async def send_daily_news(bot_app):
     message = get_all_news()
     for user_id in subscribed_users:
         try:
-            await bot.send_message(chat_id=user_id, text=message, parse_mode='HTML')
+            await bot_app.bot.send_message(chat_id=user_id, text=message, parse_mode='HTML')
         except Exception as e:
             print(f"Lỗi gửi tin: {e}")
 
-async def check_price_change(bot):
+async def check_price_change(bot_app):
     global last_prices
     gold = get_gold_price()
     usd = get_usd_price()
@@ -150,23 +150,24 @@ async def check_price_change(bot):
         message = "🔔 <b>Cập nhật giá thay đổi:</b>\n" + "\n".join(changes)
         for user_id in subscribed_users:
             try:
-                await bot.send_message(chat_id=user_id, text=message, parse_mode='HTML')
+                await bot_app.bot.send_message(chat_id=user_id, text=message, parse_mode='HTML')
             except Exception as e:
                 print(f"Lỗi gửi cảnh báo: {e}")
 
 # ====================== LẬP LỊCH ======================
-def schedule_jobs(app):
+def schedule_jobs(bot_app):
     scheduler = BackgroundScheduler()
-    loop = asyncio.get_event_loop()
 
     scheduler.add_job(
-        lambda: asyncio.run_coroutine_threadsafe(send_daily_news(app.bot), loop),
+        lambda: asyncio.run_coroutine_threadsafe(send_daily_news(bot_app), event_loop),
         trigger='cron', hour=7, minute=0
     )
+
     scheduler.add_job(
-        lambda: asyncio.run_coroutine_threadsafe(check_price_change(app.bot), loop),
+        lambda: asyncio.run_coroutine_threadsafe(check_price_change(bot_app), event_loop),
         trigger='interval', minutes=5
     )
+
     scheduler.start()
 
 # ====================== MAIN ======================
