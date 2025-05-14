@@ -4,4 +4,5 @@ apscheduler
 beautifulsoup4
 lxml
 feedparser
+requests
 
