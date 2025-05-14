@@ -3,3 +3,5 @@ httpx
 apscheduler
 beautifulsoup4
 lxml
+feedparser
+
